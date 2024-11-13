@@ -47,7 +47,7 @@ export const loginUser = async (req, res) => {
         }
 
         //check if the user is already registered or not
-        const user = await User.findOne({ email });
+        let user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'User not found', success: false});
         }
@@ -76,7 +76,7 @@ export const loginUser = async (req, res) => {
         return res.cookie("token", token, {httpOnly: true, maxAge: 1*24*60*60*1000}).json({
             message: `Welocme back ${user.username}`,
             success: true,
-            token
+            user
         })
     } catch (error) {
         return res.status(400).json({ message: error.message });
@@ -86,7 +86,8 @@ export const loginUser = async (req, res) => {
 //logoutUser
 export const logoutUser = async (req, res) => {
     try {
-        return res.cookie("token", "", {maxAge: 0}).json({ message: 'Logged out successfully', success: true });
+        res.cookie("token", "", { maxAge: 0 });
+        return res.json({ message: 'Logged out successfully', success: true });
     } catch (error) {
         return res.status(400).json({ message: error.message });
     }
@@ -99,7 +100,7 @@ export const getProfile = async (req, res) => {
         const userId = req.params.id;
 
         //check if the user exists
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select("-password");
         if (!user) {
             return res.status(404).json({ message: 'User not found', success: false });
         }
