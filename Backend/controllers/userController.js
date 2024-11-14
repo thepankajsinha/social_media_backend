@@ -1,6 +1,8 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken";
+import getDataUri from "../utils/datauri.js";
+import cloudinary from "../utils/cloudinary.js";
 
 
 //registerUser
@@ -121,16 +123,16 @@ export const editProfile = async (req, res) => {
         //extract the updated user details from the request body
         const {bio, gender } = req.body;
         const profilePicture = req.file;
-
+        let cloudResponse;
         
         //upload the profile picture if it exists
         if (profilePicture) {
             const fileUri = getDataUri(profilePicture);
-            const cloudResponse = await cloudinary.uploader.upload(fileUri)
+            cloudResponse = await cloudinary.uploader.upload(fileUri)
         }
         
         //check if the user exists
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select("-password");
         if (!user) {
             return res.status(404).json({ message: 'User not found', success: false });
         }
@@ -159,7 +161,7 @@ export const getSuggestedUsers = async (req, res) => {
     try {
 
         //get all users excluding the current user
-        const suggestedUsers = await User.find({_id: { $ne: req.id }}).select("-password");
+        const suggestedUsers = await User.find({ _id: { $ne: req.id }}).select("-password");
 
         if(!suggestedUsers){
             return res.status(404).json({ message: 'No suggested users found', success: false });
@@ -176,53 +178,48 @@ export const getSuggestedUsers = async (req, res) => {
 //followOrUnfollow
 export const followOrUnfollow = async (req, res) => {
     try {
-        //extract the user id and the target user id from the request params
-        const userId = req.id; //logged in user ki id
-        const targetUserId = req.params.id; //user jisko follow karna hai uski id
+        const userId = req.id; // logged-in user ID
+        const targetUserId = req.params.id; // target user ID to follow/unfollow
         
-        //check if the logged in user is trying to follow himself or unfollow himself
-        if(userId === targetUserId){
+        if (userId === targetUserId) {
             return res.status(400).json({ message: 'You cannot follow yourself', success: false });
         }
 
-        //check if the user exists
         const user = await User.findById(userId);
+        const targetUser = await User.findById(targetUserId);
+
         if (!user) {
-            return res.status(404).json({ message: 'User not found', success: false });
+            return res.status(404).json({ message: 'Logged-in user not found', success: false });
         }
         
-        //check if the target user exists
-        const targetUser = await User.findById(targetUserId);
         if (!targetUser) {
             return res.status(404).json({ message: 'Target user not found', success: false });
         }
 
-        //follow and unfollow logic
-        const isFollowing = user.following.includes(targetUserId)
+        const isFollowing = user.following.includes(targetUserId);
+
         if (isFollowing) {
-            //unfollow the user
             await Promise.all([
-                User.updateOne({_id: userId}, { $pull: { following: targetUserId } }),
-                User.updateOne({_id: targetUserId}, { $pull: { followers: userId } })
-            ])
+                User.updateOne({ _id: userId }, { $pull: { following: targetUserId } }),
+                User.updateOne({ _id: targetUserId }, { $pull: { followers: userId } })
+            ]);
             return res.status(200).json({
                 message: "Unfollowing user successfully.",
                 success: true,
-            })
+            });
 
         } else {
-            //follow the user
             await Promise.all([
-                User.updateOne({_id: userId}, { $push: { following: targetUserId } }),
-                User.updateOne({_id: targetUserId}, { $push: { followers: userId } })
-            ])
+                User.updateOne({ _id: userId }, { $push: { following: targetUserId } }),
+                User.updateOne({ _id: targetUserId }, { $push: { followers: userId } })
+            ]);
             return res.status(200).json({
                 message: "Following user successfully.",
                 success: true,
-            })
+            });
         }
-        
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        console.error("Error in followOrUnfollow function:", error); // Log the error for debugging
+        return res.status(500).json({ message: 'Server error', success: false });
     }
-}
+};
