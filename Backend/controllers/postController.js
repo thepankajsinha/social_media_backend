@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import cloudinary from "../utils/cloudinary.js";
 import Post from "../models/postModel.js";
-import User from "../models/postModel.js";
+import User from "../models/userModel.js";
 import Comment from "../models/commentModel.js";
 
 export const createPost = async (req, res) =>{
@@ -35,6 +35,7 @@ export const createPost = async (req, res) =>{
         }
 
         await post.populate({ path: 'author', select: '-password' });
+        console.log(post);
 
         return res.status(201).json({
             message: 'New post added',
@@ -126,11 +127,13 @@ export const creaetComment = async (req, res) => {
             text,
             author: userId,
             post: postId
-        }).populate({
+        })
+        console.log(comment)
+        await comment.populate({
             path: 'author',
             select: 'username, profilePicture'
         });
-        
+        console.log(comment)
         post.comments.push(comment._id);
         await post.save();
 
