@@ -4,6 +4,7 @@ import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
 import Comment from "../models/commentModel.js";
 
+
 export const createPost = async (req, res) =>{
     try {
         const { caption } = req.body; //post ki caption
