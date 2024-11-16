@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken";
+import { sendWelcomeEmail } from "../emails/emailHandlers.js";
 // import cloudinary from "../utils/cloudinary.js";
 
 export const signup = async (req, res) => {
@@ -50,6 +51,16 @@ export const signup = async (req, res) => {
             sameSite: 'strict'
         });
         res.status(201).json({ message: 'User registered successfully', success: true });
+        
+        const profileUrl = process.env.CLIENT_URL + "/profile/" + user.username;
+
+        try {
+            await sendWelcomeEmail(user.email, user.name, profileUrl)
+        } catch (error) {
+            console.log("Error in sending welcome email: ", error.message);
+            res.status(500).json({ message: 'Internal Server error' });
+        }
+
     } catch (error) {
         console.log("Error in signup: ", error.message);
         res.status(500).json({ message: 'Internal Server error' });
