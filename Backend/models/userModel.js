@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 //create a user model
 const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+    },
     username: {
         type: String,
         required: true,
@@ -20,36 +24,46 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    bio: {
+    bannerImg:{
         type: String,
         default: ""
     },
-    gender:{
+    headline: {
         type: String,
-        enum: ["male", "female"]
+        default: "ProConnect User"
     },
-    followers: [
+    location:{
+        type: String,
+        default: "Earth"
+    },
+    about:{
+        type: String,
+        default: "I am a ProConnect user"
+    },
+    skills:{
+        type: [String],
+    },
+    experience:[
+        {
+            title: String,
+            company: String,
+            startDate: Date,
+            endDate: Date,
+            description: String
+        }
+    ],
+    education: [
+        {
+            school: String,
+            fieldOfStudy: String,
+            startYear: Number,
+            endYear: Number
+        }
+    ],
+    connections: [
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User"
-        }
-    ],
-    following: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        }
-    ],
-    posts:[
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Post"
-        }
-    ],
-    bookmarks: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Post"
         }
     ]
 }, {timestamps: true})
