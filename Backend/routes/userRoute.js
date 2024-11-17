@@ -1,17 +1,15 @@
 import express from 'express';
-import { editProfile, followOrUnfollow, getProfile, getSuggestedUsers, loginUser, logoutUser, registerUser } from '../controllers/userController.js';
-import { isAuth } from '../middlewares/isAuth.js';
+import { getPublicProfile, getSuggestedConnections, updateProfile} from '../controllers/userController.js';
 import upload from '../middlewares/multer.js';
+import { protectRoute } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Import the controllers
-router.post("/register", registerUser)
-router.post("/login", loginUser)
-router.get("/logout", logoutUser)
-router.get("/:id/profile", isAuth, getProfile )
-router.post("/profile/edit", isAuth, upload.single("profilePicture"), editProfile)
-router.get("/suggested",isAuth, getSuggestedUsers)
-router.post("/followUnfollow/:id", isAuth, followOrUnfollow)
+
+router.get("/suggestions", protectRoute, getSuggestedConnections );
+router.get("/:username", protectRoute, getPublicProfile );
+
+
+router.put("/profile", protectRoute, updateProfile );
 
 export default router;

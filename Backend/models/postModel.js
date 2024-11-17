@@ -3,18 +3,16 @@ import mongoose from "mongoose";
 //create post schema
 
 const postSchema = new mongoose.Schema({
-  caption: {
-    type: String,
-    default: ""
-  },
-  image: {
-    type: String,
-    required: true,
-  },
-  author: {
+  author:{
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
+  },
+  content: {
+    type: String,
+  },
+  image: {
+    type: String,
   },
   likes:[
     {
@@ -22,15 +20,19 @@ const postSchema = new mongoose.Schema({
       ref: "User"
     }
   ],
-  comments:[
-    {
+  comments:[{
+    content: {type: String},
+    user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment"
+      ref: "User"
+    },
+    createdAt:{
+      type: Date,
+      default: Date.now
     }
+  }
   ]
-});
-
-//create post model and export
+}, {timestamps: true});
 
 const Post = mongoose.model("Post", postSchema);
 

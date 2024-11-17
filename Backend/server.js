@@ -4,6 +4,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./lib/database.js";
 import authRoutes from "./routes/authRoute.js";
+import userRoutes from "./routes/userRoute.js";
+import postRoutes from "./routes/postRoute.js";
 
 dotenv.config();
 
@@ -27,6 +29,8 @@ app.use(cors(corsOptions));  // Apply CORS middleware with custom options
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/post", postRoutes);
 
 
 // Start server

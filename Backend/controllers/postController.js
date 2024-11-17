@@ -1,47 +1,43 @@
-import sharp from "sharp";
-import cloudinary from "../utils/cloudinary.js";
+import cloudinary from "../lib/cloudinary.js";
 import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
-import Comment from "../models/commentModel.js";
+import Notification from "../models/notificationModel.js";
+import { sendCommentNotificationEmail } from "../emails/emailHandlers.js";
 
 
 export const createPost = async (req, res) =>{
     try {
-        const { caption } = req.body; //post ki caption
-        const image = req.file; //post ki image
-        const authorId = req.id; //post create karne wale user ki id
+        //extract body
+        const {content, image} = req.body;
 
-        if (!image) return res.status(400).json({ message: 'Image required' });
+        let newPost;
 
-        // image upload 
-        const optimizedImageBuffer = await sharp(image.buffer)
-            .resize({ width: 800, height: 800, fit: 'inside' })
-            .toFormat('jpeg', { quality: 80 })
-            .toBuffer();
-
-        // buffer to data uri
-        const fileUri = `data:image/jpeg;base64,${optimizedImageBuffer.toString('base64')}`;
-        const cloudResponse = await cloudinary.uploader.upload(fileUri);
+        if(image){
+            const imgResult = await cloudinary.uploader.upload(image);
+            newPost = new Post({
+                content,
+                image: imgResult.secure_url,
+                author: req.user._id,
+            })
+        }else{
+            newPost = new Post({
+                content,
+                author: req.user._id,
+            })
+        }
 
         const post = await Post.create({
             caption,
             image: cloudResponse.secure_url,
             author: authorId
         });
+        
+        await newPost.save();
 
-        const user = await User.findById(authorId); 
-        if (user) {
-            user.posts.push(post._id);
-            await user.save();
-        }
-
-        await post.populate({ path: 'author', select: '-password' });
-        console.log(post);
-
-        return res.status(201).json({
-            message: 'New post added',
-            post,
-            success: true,
+        res.status(201).json({
+            message: 'Post created successfully',
+            newPost,
+            success: true
         })
 
     } catch (error) {
@@ -49,29 +45,132 @@ export const createPost = async (req, res) =>{
     }
 }
 
-export const getAllPosts = async (req, res) => {
+export const getFeedPost = async (req, res) => {
     try {
-        const posts = await Post.find({}).sort({ createdAt: -1 })
-        .populate({ path: 'author', select: 'username , profilePicture'})
-        .populate({path: 'comments',sort: {createdAt: -1},populate: { path: 'author', select: 'username, profilePicture' }});
+        const posts = await Post.find({author: {$in: req.user.connections}})
+        .populate("author", "name username profilePicture headline")
+        .populate("comments.user", "name profilePicture")
+        .sort({ createdAt: -1 })
+
         return res.status(200).json({ posts, success: true });  
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        console.log("Error in getFeedPost controller ", error.message);
+        res.status(500).json({ message: 'Internal Server error' });
     }
 }  
 
-
-export const getUserPost = async (req, res) => {
+export const deletePost = async (req, res) => {
     try {
-        const autherId = req.id;
-        const posts = await Post.find({author:autherId }).sort({ createdAt: -1 })
-        .populate({ path: 'author', select: 'username , profilePicture'})
-        .populate({path: 'comments',sort: {createdAt: -1},populate: { path: 'author', select: 'username, profilePicture' }});
-        return res.status(200).json({ posts, success: true });  
+        const postId = req.params.id;
+        const userId = req.user._id;
+        
+        const post = await Post.findById(postId);
+        
+        if (!post) return res.status(404).json({ message: 'Post not found', success: false });
+        
+        if (post.author.toString()!== userId) return res.status(403).json({ message: 'Unauthorized to delete this post', success: false });
+
+        if(post.image){
+            await cloudinary.uploader.destroy(post.image.split("/").pop().split(".")[0]);
+        }
+        
+        await Post.findByIdAndDelete(postId);
+        
+        return res.status(200).json({ message: 'Post deleted successfully.', success: true });
+          
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        console.log("Error in deletePost controller ", error.message);
+        res.status(500).json({ message: 'Internal Server error' });
     }
 }
+
+
+export const getPostById = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const post = await Post.findById(postId)
+        .populate(
+            "author",
+            "name username profilePicture headline"
+        )
+        .populate(
+            "comments.user",
+            "name profilePicture"
+        );
+        
+        if (!post) return res.status(404).json({ message: 'Post not found', success: false });
+        
+        return res.status(200).json({ post, success: true });
+    } catch (error) {
+        console.log("Error in getPostById controller ", error.message);
+        res.status(500).json({ message: 'Internal Server error' });
+    }
+}
+
+
+export const creaetComment = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const { content } = req.body;
+        
+        const post = await Post.findByIdAndUpdate(postId, {
+            $push: { comments: {user: req.user._id, content } }, 
+        },{new: true})
+        .populate(
+            "author",
+            "name email username profilePicture headline"
+        );
+
+        //create a notification
+        if(post.author.toString() !== req.user._id.toString()){
+            const notification = await Notification.create({
+                recipient: post.author,
+                sender: req.user._id,
+                type: "comment",
+                relatedUser: req.user._id,
+                relatedPost: postId,
+            });
+            await notification.save();
+        }
+
+        //send mail
+        try {
+            const postUrl = process.env.CLIENT_URL + "/post/" + postId;
+            await sendCommentNotificationEmail(
+                post.author.email,
+                post.author.name,
+                req.user.name,
+                postUrl,
+                content
+            );
+        } catch (error) {
+            console.log("Error in sending comment notification email:", error);
+        }
+
+
+        return res.status(201).json({ message: 'New comment added', comment, success: true });
+          
+    } catch (error) {
+        console.log("Error in creaetComment controller ", error.message);
+        res.status(500).json({ message: 'Internal Server error' });
+    }
+} 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 export const likePost = async (req, res) => {
@@ -112,38 +211,7 @@ export const dislikePost = async (req, res) => {
 } 
 
 
-export const creaetComment = async (req, res) => {
-    try {
-        const userId = req.id; //comment karne wale user ki id
-        const postId = req.params.id; //post id, jisko comment karene wala hai
 
-        const { text } = req.body;
-        if (!text) return res.status(400).json({ message: 'Text required', success: false });
-
-
-        const post = await Post.findById(postId);
-        if (!post) return res.status(404).json({ message: 'Post not found' });
-        
-        const comment = await Comment.create({
-            text,
-            author: userId,
-            post: postId
-        })
-        console.log(comment)
-        await comment.populate({
-            path: 'author',
-            select: 'username, profilePicture'
-        });
-        console.log(comment)
-        post.comments.push(comment._id);
-        await post.save();
-
-        return res.status(201).json({ message: 'New comment added', comment, success: true });
-          
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
-    }
-} 
 
 
 export const getCommentsOfPost = async (req, res) => {
@@ -166,35 +234,7 @@ export const getCommentsOfPost = async (req, res) => {
 } 
 
 
-export const deletePost = async (req, res) => {
-    try {
-        const postId = req.params.id;
-        const autherId = req.id;
-        
-        const post = await Post.findById(postId);
-        
-        if (!post) return res.status(404).json({ message: 'Post not found', success: false });
-        
-        if (post.author.toString()!== autherId) return res.status(403).json({ message: 'Unauthorized to delete this post', success: false });
-        
-        await Post.findByIdAndDelete(postId);
-        
-        //remove post from user's post list
-        const user = await User.findById(autherId);
-        if (user) {
-            user.posts = user.posts.filter(postId => postId.toString()!== postId);
-            await user.save();
-        }
-        
-        //remove post from all comments
-        await Comment.deleteMany({ post: postId });
-        
-        return res.status(200).json({ message: 'Post deleted', success: true });
-          
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
-    }
-}
+
 
 
 export const bookmarkPost = async (req, res) => {

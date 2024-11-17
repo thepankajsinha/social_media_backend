@@ -1,19 +1,13 @@
 import express from 'express';
-import {isAuth} from "../middlewares/isAuth.js";
-import upload from '../middlewares/multer.js';
-import { bookmarkPost, creaetComment, createPost, deletePost, dislikePost, getAllPosts, getCommentsOfPost, getUserPost, likePost } from '../controllers/postController.js';
+import {creaetComment, createPost, deletePost, getFeedPost,getPostById } from '../controllers/postController.js';
+import { protectRoute } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Import the controllers
-router.post("/addpost", isAuth, upload.single("image"), createPost )
-router.get("/all", isAuth, getAllPosts )
-router.get("/userpost/all", isAuth, getUserPost )
-router.get("/:id/like", isAuth, likePost )
-router.get("/:id/dislike", isAuth, dislikePost )
-router.post("/:id/comment", isAuth, creaetComment )
-router.post("/:id/comment/all", isAuth, getCommentsOfPost )
-router.delete("/delete/:id", isAuth, deletePost )
-router.delete("/:id/bookmark", isAuth, bookmarkPost )
+router.get("/", protectRoute, getFeedPost);
+router.post("/create", protectRoute, createPost);
+router.delete("/delete/:id", protectRoute, deletePost);
+router.get("/:id", protectRoute, getPostById);
+router.post("/:id/comment", protectRoute, creaetComment);
 
 export default router;
