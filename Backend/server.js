@@ -6,6 +6,7 @@ import connectDB from "./lib/database.js";
 import authRoutes from "./routes/authRoute.js";
 import userRoutes from "./routes/userRoute.js";
 import postRoutes from "./routes/postRoute.js";
+import notificationRoutes from "./routes/notificationRoute.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use(cors(corsOptions));  // Apply CORS middleware with custom options
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/post", postRoutes);
+app.use("/api/v1/notification", notificationRoutes);
 
 
 // Start server

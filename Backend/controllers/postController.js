@@ -157,22 +157,6 @@ export const creaetComment = async (req, res) => {
 } 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export const likePost = async (req, res) => {
     try {
         const userId = req.id; //like karne wale user ki id
@@ -181,86 +165,31 @@ export const likePost = async (req, res) => {
         const post = await Post.findById(postId); //find post using post id
 
         if (!post) return res.status(404).json({ message: 'Post not found' });
-
-        await Post.updateOne({$addToSet: {likes: userId}})
-        await post.save();
-
-        return res.status(200).json({ message: "Post Liked",post, success: true });  
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
-    }
-}  
-
-
-export const dislikePost = async (req, res) => {
-    try {
-        const userId = req.id; //like karne wale user ki id
-        const postId = req.params.id; //post id, jisko user like karene wala hai
-
-        const post = await Post.findById(postId); //find post using post id
-
-        if (!post) return res.status(404).json({ message: 'Post not found' });
-
-        await Post.updateOne({$pull: {likes: userId}})
-        await post.save();
-
-        return res.status(200).json({ message: "Post Disliked",post, success: true });  
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
-    }
-} 
-
-
-
-
-
-export const getCommentsOfPost = async (req, res) => {
-    try {
-        const postId = req.params.id;
-        //find comments
-        const comments = await Comment.find({ post: postId }).populate({
-            path: 'author',
-            select: 'username, profilePicture'
-        });
-
-        //comment validation
-        if (!comments) return res.status(404).json({ message: 'No comments found', success: false });
         
-        return res.status(200).json({ comments, success: true });
-          
-    } catch (error) {
-        return res.status(400).json({ message: error.message });
-    }
-} 
-
-
-
-
-
-export const bookmarkPost = async (req, res) => {
-    try {
-        const postId = req.params.id;
-        const autherId = req.id;
-        
-        const post = await Post.findById(postId);
-        
-        if (!post) return res.status(404).json({ message: 'Post not found', success: false });
-
-        const user = await User.findById(autherId);
-        //bookmark
-        if (user.bookmarks.includes(post._id)){
-            //remove bookmark
-            await user.updateOne({$pull: {bookmarks: post._id}});
-            await user.save();
-            return res.status(200).json({ message: 'Bookmark removed', success: true });
+        if(post.likes.includes(userId)){
+            //unlike the post
+            post.likes = post.likes.filter((id) =>{id.toString() != userId.toString()});
         }else{
-            //add bookmark
-            await user.updateOne({$addToSet: {bookmarks: post._id}});
-            await user.save();
-            return res.status(200).json({ message: 'Bookmark added', success: true });
-        }
-         
+            //like the post
+            post.likes.push(userId);
+            //create a notification
+            if(post.author.toString()!== userId.toString()){
+                const notification = await Notification.create({
+                    recipient: post.author,
+                    type: "like",
+                    relatedUser: userId,
+                    relatedPost: postId,
+                });
+                await notification.save();
+            }
+        }    
+        await post.save();
+
+        return res.status(200).json({ message: "Post Liked successfully.",post, success: true });  
     } catch (error) {
-        return res.status(400).json({ message: error.message });
+        console.log("Error in creaetComment controller ", error.message);
+        res.status(500).json({ message: 'Internal Server error' });
     }
-}
+} 
+
+
