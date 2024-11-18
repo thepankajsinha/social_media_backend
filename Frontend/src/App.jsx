@@ -1,9 +1,9 @@
-import React from 'react'
+import Layout from "./components/layout/Layout";
 
-function App() {
+export default function App() {
   return (
-    <div>App</div>
+    <Layout>
+      <h1>Hello World</h1>
+    </Layout>
   )
 }
-
-export default App

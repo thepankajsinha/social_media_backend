@@ -1,6 +1,6 @@
 import express from 'express';
 import { protectRoute } from '../middlewares/authMiddleware.js';
-import { acceptConnectionRequest, sendConnectionRequest } from '../controllers/connectionController.js';
+import { acceptConnectionRequest, getConnectionRequests, getConnectionStatus, getUserConnections, rejectConnectionRequest, removeConnection, sendConnectionRequest } from '../controllers/connectionController.js';
 
 const router = express.Router();
 
