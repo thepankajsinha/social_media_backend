@@ -1,8 +1,6 @@
 import cloudinary from "../lib/cloudinary.js";
 import Post from "../models/postModel.js";
-import User from "../models/userModel.js";
 import Notification from "../models/notificationModel.js";
-import { sendCommentNotificationEmail } from "../emails/emailHandlers.js";
 
 
 export const createPost = async (req, res) =>{
@@ -25,12 +23,6 @@ export const createPost = async (req, res) =>{
                 author: req.user._id,
             })
         }
-
-        const post = await Post.create({
-            caption,
-            image: cloudResponse.secure_url,
-            author: authorId
-        });
         
         await newPost.save();
 
@@ -45,9 +37,11 @@ export const createPost = async (req, res) =>{
     }
 }
 
+
+
 export const getFeedPost = async (req, res) => {
     try {
-        const posts = await Post.find({author: {$in: req.user.connections}})
+        const posts = await Post.find({author: {$in: [...req.user.connections, req.user._id]}})
         .populate("author", "name username profilePicture headline")
         .populate("comments.user", "name profilePicture")
         .sort({ createdAt: -1 })
@@ -58,6 +52,8 @@ export const getFeedPost = async (req, res) => {
         res.status(500).json({ message: 'Internal Server error' });
     }
 }  
+
+
 
 export const deletePost = async (req, res) => {
     try {
@@ -85,6 +81,8 @@ export const deletePost = async (req, res) => {
 }
 
 
+
+
 export const getPostById = async (req, res) => {
     try {
         const postId = req.params.id;
@@ -106,6 +104,8 @@ export const getPostById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server error' });
     }
 }
+
+
 
 
 export const creaetComment = async (req, res) => {
@@ -133,21 +133,7 @@ export const creaetComment = async (req, res) => {
             await notification.save();
         }
 
-        //send mail
-        try {
-            const postUrl = process.env.CLIENT_URL + "/post/" + postId;
-            await sendCommentNotificationEmail(
-                post.author.email,
-                post.author.name,
-                req.user.name,
-                postUrl,
-                content
-            );
-        } catch (error) {
-            console.log("Error in sending comment notification email:", error);
-        }
-
-
+       
         return res.status(201).json({ message: 'New comment added', comment, success: true });
           
     } catch (error) {
@@ -155,6 +141,7 @@ export const creaetComment = async (req, res) => {
         res.status(500).json({ message: 'Internal Server error' });
     }
 } 
+
 
 
 export const likePost = async (req, res) => {

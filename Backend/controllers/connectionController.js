@@ -1,4 +1,3 @@
-import { sendConnectionAcceptedEmail } from "../emails/emailHandlers.js";
 import ConnectionRequest from "../models/connectionModel.js";
 import Notification from "../models/notificationModel.js";
 import User from "../models/userModel.js";
@@ -39,6 +38,8 @@ export const sendConnectionRequest = async (req, res) => {
 	}
 };
 
+
+
 export const acceptConnectionRequest = async (req, res) => {
 	try {
 		const { requestId } = req.params;
@@ -78,21 +79,16 @@ export const acceptConnectionRequest = async (req, res) => {
 
 		res.json({ message: "Connection accepted successfully" });
 
-		const senderEmail = request.sender.email;
-		const senderName = request.sender.name;
-		const recipientName = request.recipient.name;
-		const profileUrl = process.env.CLIENT_URL + "/profile/" + request.recipient.username;
 
-		try {
-			await sendConnectionAcceptedEmail(senderEmail, senderName, recipientName, profileUrl);
-		} catch (error) {
-			console.error("Error in sendConnectionAcceptedEmail:", error);
-		}
 	} catch (error) {
 		console.error("Error in acceptConnectionRequest controller:", error);
 		res.status(500).json({ message: "Server error" });
 	}
 };
+
+
+
+
 
 export const rejectConnectionRequest = async (req, res) => {
 	try {
@@ -119,6 +115,9 @@ export const rejectConnectionRequest = async (req, res) => {
 	}
 };
 
+
+
+
 export const getConnectionRequests = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -134,6 +133,10 @@ export const getConnectionRequests = async (req, res) => {
 		res.status(500).json({ message: "Server error" });
 	}
 };
+
+
+
+
 
 export const getUserConnections = async (req, res) => {
 	try {
@@ -151,6 +154,9 @@ export const getUserConnections = async (req, res) => {
 	}
 };
 
+
+
+
 export const removeConnection = async (req, res) => {
 	try {
 		const myId = req.user._id;
@@ -165,6 +171,10 @@ export const removeConnection = async (req, res) => {
 		res.status(500).json({ message: "Server error" });
 	}
 };
+
+
+
+
 
 export const getConnectionStatus = async (req, res) => {
 	try {

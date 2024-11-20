@@ -26,6 +26,7 @@ export const getSuggestedConnections = async (req, res) => {
 }
 
 
+
 export const getPublicProfile = async (req, res) => {
     try {
         const user = await User.findOne({username: req.params.username}).select("-password");
@@ -40,6 +41,7 @@ export const getPublicProfile = async (req, res) => {
         res.status(500).json({ message: 'Internal Server error' });
     }
 }
+
 
 
 export const updateProfile = async (req, res) => {
