@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-// import { axiosInstance } from "../../lib/axios.js";
-// import toast from "react-hot-toast";
 import { Loader } from "lucide-react";
+import { useUserStore } from "../../stores/useUserStore.js";
 
 function SignUpForm() {
   const [name, setName] = useState("");
@@ -9,8 +8,11 @@ function SignUpForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const { signup, isLoading } = useUserStore();
+
   const handleSignUp = (e) => {
     e.preventDefault();
+    signup({name, email, username, password});
   };
 
   return (
@@ -48,12 +50,9 @@ function SignUpForm() {
         required
       />
 
-      <button
-        type="submit"
-        className="btn btn-primary w-full text-white"
-      >
-        Agree & Join
-      </button>
+      <button type='submit' disabled={isLoading} className='btn btn-primary w-full text-white'>
+				{isLoading ? <Loader className='size-5 animate-spin' /> : "Agree & Join"}
+			</button>
     </form>
   );
 }
